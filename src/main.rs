@@ -48,8 +48,6 @@ async fn main() {
     {
         let taggings_response = api.get_taggings(&client, None).await.unwrap();
 
-        eprintln!("Taggings requested");
-
         if let CacheRequestResponse::Modified(taggings) = taggings_response {
             // TODO: Error if no matches found
             for tagging in &taggings.value {
@@ -64,6 +62,7 @@ async fn main() {
     // Sort the IDs so that we can `binary_search` it later
     target_feed_ids.sort();
 
+    eprintln!("Found these matching feed IDs:");
     for feed_id in target_feed_ids.iter() {
         eprintln!(" - {}", feed_id);
     }
@@ -122,7 +121,7 @@ async fn main() {
         }
 
         println!(
-            "Max age: Marking {} entries as unread due to being older than {}",
+            "Max age: {} entries to mark as unread due to being older than {}",
             aged_out_entry_ids.len(),
             oldest_allowed
         );
@@ -130,16 +129,20 @@ async fn main() {
         to_mark_unread_entry_ids.append(&mut aged_out_entry_ids);
     }
 
-    // We can only mark 1,000 entries as read per request, so we chunk the above list
-    for (index, matching_entry_page) in to_mark_unread_entry_ids.chunks(1_000).enumerate() {
-        eprintln!(
-            "Marking {} on page {} as read",
-            matching_entry_page.len(),
-            index
-        );
-        api.set_entries_read(&client, matching_entry_page)
-            .await
-            .unwrap();
+    if to_mark_unread_entry_ids.len() == 0 {
+        println!("No entries to mark as read!");
+    } else {
+        // We can only mark 1,000 entries as read per request, so we chunk the above list
+        for (index, matching_entry_page) in to_mark_unread_entry_ids.chunks(1_000).enumerate() {
+            eprintln!(
+                "Marking {} on page {} as read",
+                matching_entry_page.len(),
+                index
+            );
+            api.set_entries_read(&client, matching_entry_page)
+                .await
+                .unwrap();
+        }
     }
 
     println!("Done!");
