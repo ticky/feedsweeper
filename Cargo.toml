@@ -1,8 +1,10 @@
 [package]
 name = "feedsweeper"
-version = "0.1.0"
-repository = "https://github.com/ticky/feedsweeper"
+description = "Automatically tidy up your RSS feed backlog"
+version = "0.1.1"
+license = "MIT OR Apache-2.0"
 edition = "2021"
+repository = "https://github.com/ticky/feedsweeper"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
