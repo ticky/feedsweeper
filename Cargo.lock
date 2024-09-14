@@ -270,7 +270,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "feedgarbologist"
+name = "feedsweeper"
 version = "0.1.0"
 dependencies = [
  "chrono",
