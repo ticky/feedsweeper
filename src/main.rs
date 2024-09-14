@@ -1,12 +1,11 @@
 use clap::Parser;
-use feedbin_api::models::{CacheRequestResponse, Entry};
+use feedbin_api::models::{CacheRequestResponse, Entry as FeedbinEntry};
 use feedbin_api::FeedbinApi;
 use lazy_static::lazy_static;
-use url::Url;
 
 lazy_static! {
-    static ref FEEDBIN_BASE_URL: Url =
-        Url::parse("https://api.feedbin.com/").expect("Could not parse Feedbin API Base URL");
+    static ref FEEDBIN_BASE_URL: url::Url =
+        url::Url::parse("https://api.feedbin.com/").expect("Could not parse Feedbin API Base URL");
 }
 
 /// Cleaning tool for your Feedbin account
@@ -14,27 +13,35 @@ lazy_static! {
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Your Feedbin username
-    #[arg(short, long)]
+    #[arg(short, long, env = "FEEDBIN_USERNAME")]
     username: String,
 
     /// Your Feedbin password
-    #[arg(short, long)]
+    #[arg(short, long, env = "FEEDBIN_PASSWORD")]
     password: String,
 
     /// Names of tags to clean up feeds from
     #[arg(short, long, required = true)]
     tagged: Vec<String>,
+
+    /// Maximum entry age to keep unread.
+    ///
+    /// Specify a duration such as "1 week", "3M" (3 months), "10d" (10 days). You can specify multiple time spans if you need more specificity, such as "1d 12h".
+    ///
+    /// Supported time span suffixes include: min, minute, minutes, m, hr, hour, hours, h, day, days, d, week, weeks, w, month, months, M, year, years, y.
+    #[arg(short, long)]
+    max_age: Option<humantime::Duration>,
 }
 
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
 
+    // eprintln!("{:#?}", args);
+
     let client = reqwest::Client::new();
-    eprintln!("Created HTTP client");
 
     let api = FeedbinApi::new(&FEEDBIN_BASE_URL, args.username, args.password);
-    eprintln!("Created API client");
 
     let mut target_feed_ids: Vec<u64> = Vec::new();
 
@@ -61,13 +68,10 @@ async fn main() {
         eprintln!(" - {}", feed_id);
     }
 
-    eprintln!("Getting unread entry IDs");
     let all_unread_entry_ids = api.get_unread_entry_ids(&client).await.unwrap();
-    eprintln!("There are {} unread entries", all_unread_entry_ids.len());
+    eprintln!("Found {} unread entries", all_unread_entry_ids.len());
 
-    eprintln!("Getting entries for above feed IDs");
-
-    let mut tagged_unread_entries: Vec<Entry> = Vec::new();
+    let mut tagged_unread_entries: Vec<FeedbinEntry> = Vec::new();
 
     // We can only request 100 entries per page, so we chunk the above list
     for (index, unread_entry_page) in all_unread_entry_ids.chunks(100).enumerate() {
@@ -98,8 +102,45 @@ async fn main() {
         tagged_unread_entries.append(&mut entries_response);
     }
 
-    eprintln!("Tagged Entries: {:#?}", tagged_unread_entries);
+    let mut to_mark_unread_entry_ids: Vec<u64> = Vec::new();
 
-    // There is a limit of 1,000 entry_ids per request
-    // api.set_entries_read(&client, matching_entries).await.unwrap();
+    if let Some(max_age) = args.max_age {
+        let mut aged_out_entry_ids: Vec<u64> = Vec::new();
+
+        let reference_time = chrono::Local::now();
+        let oldest_allowed = reference_time - *max_age;
+
+        for unread_entry in tagged_unread_entries.into_iter() {
+            // TODO: Don't panic here
+            let entry_published_date =
+                chrono::DateTime::parse_from_rfc3339(&unread_entry.published).unwrap();
+
+            if entry_published_date < oldest_allowed {
+                eprintln!("Matching entry: {:#?}", unread_entry);
+                aged_out_entry_ids.push(unread_entry.id)
+            }
+        }
+
+        println!(
+            "Max age: Marking {} entries as unread due to being older than {}",
+            aged_out_entry_ids.len(),
+            oldest_allowed
+        );
+
+        to_mark_unread_entry_ids.append(&mut aged_out_entry_ids);
+    }
+
+    // We can only mark 1,000 entries as read per request, so we chunk the above list
+    for (index, matching_entry_page) in to_mark_unread_entry_ids.chunks(1_000).enumerate() {
+        eprintln!(
+            "Marking {} on page {} as read",
+            matching_entry_page.len(),
+            index
+        );
+        api.set_entries_read(&client, matching_entry_page)
+            .await
+            .unwrap();
+    }
+
+    println!("Done!");
 }
