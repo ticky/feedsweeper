@@ -1,6 +1,6 @@
 # FeedSweeper
 
-Automatically tidy up your RSS feed backlog.
+🧹 Automatically tidy up your RSS feed backlog.
 
 ## About
 
@@ -8,7 +8,19 @@ FeedSweeper is a tool for [Feedbin](https://feedbin.com) intended to help keep y
 
 ## Installation
 
-Builds are not currently provided, so it's currently expected that you know your way around the Rust compiler.
+### Easy mode (macOS or Linux)
+
+```sh
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/ticky/feedsweeper/releases/latest/download/feedsweeper-installer.sh | sh
+```
+
+### With cargo
+
+```sh
+cargo install feedsweeper
+```
+
+### From source
 
 Clone this repository and run `cargo install --path .` inside it.
 
