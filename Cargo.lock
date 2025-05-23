@@ -267,9 +267,9 @@ checksum = "e8c02a5121d4ea3eb16a80748c74f5549a5665e4c21333c6098f283870fbdea6"
 
 [[package]]
 name = "feedbin_api"
-version = "0.3.1"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e0f5c9d2438a2aa3bf8b73dfc59263f36b77a9445be3a9bf3d5fff185c5fb3c"
+checksum = "63ff37a3599411afb5dc56ca772f6febe4006860d06bd39498bd0b571b6a9653"
 dependencies = [
  "chrono",
  "reqwest",
