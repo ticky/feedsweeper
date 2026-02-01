@@ -11,7 +11,7 @@ repository = "https://github.com/ticky/feedsweeper"
 [dependencies]
 chrono = "0.4"
 clap = { version = "4.5", features = ["derive", "env"] }
-feedbin_api = "0.4"
+feedbin_api = "0.5"
 humantime = "2.3"
 lazy_static = "1.4"
 reqwest = "0.13"
